@@ -9,13 +9,19 @@ import axios from 'axios';
 import Link from 'next/link';
 import { loginSchema, LoginInput } from '@/schema/authSchema';
 
-// 💡 IMPOR HANYA ELEMEN PRIMITIF SHADCN/UI
+// 💡 IMPOR UNTUK MENYUNTIKKAN STATE GLOBAL
+import { useDispatch } from 'react-redux';
+import { setCredentials } from '@/features/auth/store/authSlice';
+
+// IMPOR ELEMEN PRIMITIF SHADCN/UI
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 export default function LoginForm() {
   const router = useRouter();
+  const dispatch = useDispatch(); // 💡 Inisialisasi kurir dispatch Redux
 
   const {
     register,
@@ -31,12 +37,34 @@ export default function LoginForm() {
       return response.data;
     },
     onSuccess: (data) => {
+      // 💡 Menyesuaikan struktur data bersarang sesuai respons asli database Railway Anda
       const token = data?.data?.token || data?.token;
-      if (token) {
-        localStorage.setItem('social_auth_token', token);
+      const userData = data?.data?.user || data?.user;
+
+      if (token && userData) {
+        // 💡 1. SUNTIKKAN DATA PROFIL ASLI API KE REDUX STORE GLOBAL (Seketika mengubah Navbar)
+        dispatch(
+          setCredentials({
+            token: token,
+            user: {
+              id: String(userData.id), // Konversi aman number ke string
+              name: userData.name,
+              username: userData.username,
+              email: userData.email,
+              phone: userData.phone,
+              avatarUrl: userData.avatarUrl || null,
+              bio: userData.bio || null,
+            },
+          })
+        );
+
+        toast.success(`Welcome back, ${userData.name}! 👋`, {
+          description: 'You have logged in successfully.',
+        });
+        router.push('/feed'); // Diarahkan ke feed privat
+      } else {
+        toast.error('Format payload data server tidak sesuai.');
       }
-      alert('Login berhasil!');
-      router.push('/feed');
     },
     onError: (error) => {
       let serverMessage = 'Email atau password salah.';
@@ -46,7 +74,9 @@ export default function LoginForm() {
           | undefined;
         serverMessage = errorData?.message || serverMessage;
       }
-      alert(serverMessage);
+      toast.error('Authentication Failed', {
+        description: serverMessage,
+      });
     },
   });
 

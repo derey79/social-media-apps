@@ -9,13 +9,19 @@ import axios from 'axios';
 import Link from 'next/link';
 import { registerSchema, RegisterInput } from '@/schema/authSchema';
 
-// 💡 IMPOR HANYA ELEMEN PRIMITIF SHADCN/UI
+// 💡 IMPOR UNTUK MENYUNTIKKAN STATE GLOBAL REDUX
+import { useDispatch } from 'react-redux';
+import { setCredentials } from '@/features/auth/store/authSlice';
+
+// 💡 IMPOR ELEMEN PRIMITIF SHADCN/UI
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 export default function RegisterForm() {
   const router = useRouter();
+  const dispatch = useDispatch(); // 💡 Inisialisasi kurir dispatch Redux
 
   const {
     register,
@@ -32,11 +38,35 @@ export default function RegisterForm() {
     },
     onSuccess: (data) => {
       const token = data?.data?.token || data?.token;
-      if (token) {
+      const userData = data?.data?.user || data?.user;
+
+      if (token && userData) {
+        dispatch(
+          setCredentials({
+            token: token,
+            user: {
+              id: String(userData.id),
+              name: userData.name,
+              username: userData.username,
+              email: userData.email,
+              phone: userData.phone,
+              avatarUrl: userData.avatarUrl || null,
+              bio: userData.bio || null,
+            },
+          })
+        );
+
+        toast.success('Account Created Successfully! 🎉', {
+          description: `Welcome to the community, @${userData.username}!`,
+        });
+        router.push('/feed');
+      } else if (token) {
         localStorage.setItem('social_auth_token', token);
+        alert('Registrasi berhasil! Memulihkan data profil...');
+        router.push('/feed');
+      } else {
+        toast.error('Format payload data server tidak sesuai.');
       }
-      alert('Registrasi akun berhasil!');
-      router.push('/feed');
     },
     onError: (error) => {
       let serverMessage = 'Gagal mendaftar akun baru.';
@@ -56,7 +86,10 @@ export default function RegisterForm() {
           }
         }
       }
-      alert(serverMessage);
+
+      toast.error('Registration Failed', {
+        description: serverMessage,
+      });
     },
   });
 
