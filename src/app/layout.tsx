@@ -4,6 +4,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 
 import AppProviders from '@/components/providers/AppProviders';
+import AuthHydrator from '@/components/providers/AuthHydrator';
+import { Toaster } from '@/components/ui/sonner';
 
 // const geistSans = Geist({
 //   variable: '--font-geist-sans',
@@ -28,16 +30,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html
-      lang='en'
-      className={`${inter.variable} font-sans h-full antialiased`}
-    >
-      <body className='min-h-full flex flex-col'>
-        <AppProviders>{children}</AppProviders>
+    <html lang='en' suppressHydrationWarning>
+      {/* 💡 Explicitly pass the variable class along with its raw styling definition mapping */}
+      <body
+        className={`${inter.variable} font-sans antialiased`}
+        style={{ fontFamily: 'var(--font-inter), sans-serif' }}
+      >
+        <AppProviders>
+          <AuthHydrator>{children}</AuthHydrator>
+        </AppProviders>
+        <Toaster position='top-right' richColors closeButton />
       </body>
     </html>
   );
