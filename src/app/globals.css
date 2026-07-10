@@ -49,7 +49,7 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  --background: #000000;
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -121,15 +121,20 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
+  /* body {
     @apply bg-background text-foreground;
-  }
+  } */
+  body,
   html {
-    @apply font-sans;
+    @apply font-sans bg-background text-foreground;
   }
 }
 
 @theme {
-  /* 💡 Mengunci font Inter (dari variabel layout.tsx) sebagai font utama aplikasi */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* sementara pakai font Inter */
+  --font-sans:
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --max-width-content: 1440px;
+  --spacing-container-x: 120px;
 }
