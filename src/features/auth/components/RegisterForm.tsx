@@ -8,12 +8,8 @@ import { axiosInstance } from '@/lib/axios';
 import axios from 'axios';
 import Link from 'next/link';
 import { registerSchema, RegisterInput } from '@/schema/authSchema';
-
-// 💡 IMPOR UNTUK MENYUNTIKKAN STATE GLOBAL REDUX
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '@/features/auth/store/authSlice';
-
-// 💡 IMPOR ELEMEN PRIMITIF SHADCN/UI
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -21,7 +17,7 @@ import { toast } from 'sonner';
 
 export default function RegisterForm() {
   const router = useRouter();
-  const dispatch = useDispatch(); // 💡 Inisialisasi kurir dispatch Redux
+  const dispatch = useDispatch();
 
   const {
     register,
@@ -100,11 +96,11 @@ export default function RegisterForm() {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className='space-y-4 w-full max-w-md p-8 bg-white rounded-[24px] shadow-sm border border-neutral-100 text-left'
+      className='space-y-5 w-full max-w-md p-8 rounded-[24px] shadow-lg border border-neutral-800 text-center bg-[#0B0F17]'
     >
       <div className='space-y-1 mb-2'>
-        <h2 className='text-2xl font-extrabold text-neutral-900 tracking-tight'>
-          Create your Account
+        <h2 className='text-2xl font-extrabold text-white tracking-tight'>
+          Register
         </h2>
         <p className='text-sm text-neutral-500'>
           Join us to explore amazing stories.
@@ -114,13 +110,14 @@ export default function RegisterForm() {
       {/* FULL NAME */}
       <div className='space-y-1'>
         <Label htmlFor='name' className='text-xs font-bold text-neutral-700'>
-          Full Name
+          Name
         </Label>
         <Input
           id='name'
-          placeholder='John Doe'
-          className='h-10 rounded-xl border-neutral-200'
-          {...register('name')}
+          placeholder='Enter your name'
+          className='h-10 rounded-xl border-neutral-800'
+          {...register('name', { valueAsNumber: false })}
+          suppressHydrationWarning={true}
         />
         {errors.name && (
           <p className='text-xs font-medium text-red-500'>
@@ -129,7 +126,7 @@ export default function RegisterForm() {
         )}
       </div>
 
-      {/* USERNAME */}
+      {/* usename */}
       <div className='space-y-1'>
         <Label
           htmlFor='username'
@@ -139,9 +136,10 @@ export default function RegisterForm() {
         </Label>
         <Input
           id='username'
-          placeholder='johndoe'
-          className='h-10 rounded-xl border-neutral-200'
+          placeholder='Enter your username'
+          className='h-10 rounded-xl border-neutral-800'
           {...register('username')}
+          suppressHydrationWarning={true}
         />
         {errors.username && (
           <p className='text-xs font-medium text-red-500'>
@@ -150,7 +148,7 @@ export default function RegisterForm() {
         )}
       </div>
 
-      {/* EMAIL ADDRESS */}
+      {/* email address */}
       <div className='space-y-1'>
         <Label htmlFor='email' className='text-xs font-bold text-neutral-700'>
           Email Address
@@ -158,9 +156,10 @@ export default function RegisterForm() {
         <Input
           id='email'
           type='email'
-          placeholder='john@email.com'
-          className='h-10 rounded-xl border-neutral-200'
+          placeholder='name@email.com'
+          className='h-10 rounded-xl border-neutral-800'
           {...register('email')}
+          suppressHydrationWarning={true}
         />
         {errors.email && (
           <p className='text-xs font-medium text-red-500'>
@@ -169,7 +168,7 @@ export default function RegisterForm() {
         )}
       </div>
 
-      {/* PHONE NUMBER */}
+      {/* phone number */}
       <div className='space-y-1'>
         <Label htmlFor='phone' className='text-xs font-bold text-neutral-700'>
           Phone Number
@@ -177,8 +176,9 @@ export default function RegisterForm() {
         <Input
           id='phone'
           placeholder='081234567890'
-          className='h-10 rounded-xl border-neutral-200'
+          className='h-10 rounded-xl border-neutral-800'
           {...register('phone')}
+          suppressHydrationWarning={true}
         />
         {errors.phone && (
           <p className='text-xs font-medium text-red-500'>
@@ -187,7 +187,7 @@ export default function RegisterForm() {
         )}
       </div>
 
-      {/* PASSWORD */}
+      {/* password */}
       <div className='space-y-1'>
         <Label
           htmlFor='password'
@@ -199,8 +199,9 @@ export default function RegisterForm() {
           id='password'
           type='password'
           placeholder='••••••••'
-          className='h-10 rounded-xl border-neutral-200'
+          className='h-10 rounded-xl border-neutral-800'
           {...register('password')}
+          suppressHydrationWarning={true}
         />
         {errors.password && (
           <p className='text-xs font-medium text-red-500'>
@@ -212,7 +213,7 @@ export default function RegisterForm() {
       <Button
         type='submit'
         disabled={mutation.isPending}
-        className='w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all text-sm shadow-sm mt-2'
+        className='w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all text-sm shadow-sm mt-2 cursor-pointer'
       >
         {mutation.isPending ? 'Registering...' : 'Register'}
       </Button>
