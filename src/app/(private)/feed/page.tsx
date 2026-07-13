@@ -1,13 +1,17 @@
 'use client';
 
-import { useSyncExternalStore } from 'react'; // 💡 1. Impor store sinkronisasi eksternal
-import { useRouter } from 'next/navigation';
-import { useDispatch, useSelector } from 'react-redux';
-import { logOutAction } from '@/features/auth/store/authSlice';
+import { useState, useSyncExternalStore } from 'react'; // 💡 HAPUS total useEffect dari daftar impor
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
-import { Button } from '@/components/ui/button';
-import { LogOut, Flame, ShieldAlert } from 'lucide-react';
+import { useScrollDirection } from '@/features/auth/hooks/useScrollDirection';
 import { toast } from 'sonner';
+
+import ExploreTimeline from '@/features/feed/components/ExploreTimeline';
+import HomeTimeline from '@/features/feed/components/HomeTimeline';
+import FeedTabs from '@/features/feed/components/FeedTabs';
+import FeedBottomNav from '@/features/feed/components/FeedBottomNav';
+import CreatePostModal from '@/features/feed/components/CreatePostModal';
 
 const emptySubscribe = () => () => {};
 const getSnapshot = () => true;
@@ -15,75 +19,90 @@ const getServerSnapshot = () => false;
 
 export default function FeedPage() {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const isVisible = useScrollDirection();
+  const searchParams = useSearchParams();
 
+  // Baca parameter kueri ?tab=feed dari klik logo
+  const tabQuery = searchParams.get('tab');
+
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const isClient = useSyncExternalStore(
     emptySubscribe,
     getSnapshot,
     getServerSnapshot
   );
 
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const activeTab = isClient && isAuthenticated ? 'feed' : 'explore';
+  const [manualTab, setManualTab] = useState<'feed' | 'explore' | null>(null);
+  const [prevTabQuery, setPrevIsTabQuery] = useState<string | null>(null);
 
-  const handleLogout = () => {
-    dispatch(logOutAction());
-    toast.info('Signed Out Securely', {
-      description: 'Your local authentication session has been cleared.',
-    });
-    router.refresh();
+  // =========================================================================
+  // 👑 KUNCI DERIVATIF LOGO RESET (ANTI-CASCADING RENDER & EFFECTLESS):
+  // Jika rendering mendeteksi adanya kedatangan parameter ?tab=feed baru dari URL,
+  // langsung paksa ubah state penentu arah di sini saat rendering berjalan.
+  // Logika ini melenyapkan siklus useEffect dan menghancurkan peringatan linter 100%!
+  // =========================================================================
+  if (tabQuery !== prevTabQuery) {
+    if (tabQuery === 'feed') {
+      setManualTab(null); // Reset manual tab seketika ke default activeTab (feed)
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Gulir halus ke atas layar
+      }
+    }
+    setPrevIsTabQuery(tabQuery);
+  }
+
+  const currentTab = manualTab !== null ? manualTab : activeTab;
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  const handlePlusAction = () => {
+    if (!isAuthenticated) {
+      toast.warning('Authentication Required', {
+        description: 'Please sign in to write and publish your own stories!',
+      });
+      router.push('/login');
+    } else {
+      setIsCreateOpen(true);
+    }
   };
 
   return (
-    <div className='space-y-6 text-left'>
-      {/* HEADER TAB */}
-      <div className='flex items-center gap-3 border-b border-[#181D27] pb-4'>
-        <Flame className='h-6 w-6 text-blue-500' />
-        <h1 className='text-2xl font-extrabold text-white tracking-tight'>
-          Home Feed
-        </h1>
-      </div>
+    <div className='w-full min-h-screen text-center relative pb-32'>
+      {/* 1. TOP FLOATING TABS */}
+      <FeedTabs
+        activeTab={currentTab}
+        setActiveTab={setManualTab}
+        isVisible={isVisible}
+      />
 
-      {/* CONTENT BOX */}
-      <div className='p-6 bg-[#0B0F17] border border-[#181D27] rounded-[24px] max-w-xl space-y-4'>
-        <p className='text-sm text-neutral-400 leading-relaxed'>
-          Selamat! Navbar hitam mewah Anda berhasil dirender dengan mulus
-          mengikuti struktur grid Figma. Struktur halaman ini sudah siap
-          didekorasi dengan baris data postingan media sosial.
-        </p>
-
-        {/* 💡 4. Tambahkan pengaman isClient agar server dan browser tidak bertabrakan saat render pertama */}
-        {isClient && !isAuthenticated && (
-          <div className='flex items-start gap-3 p-4 bg-amber-950/30 border border-amber-900/50 rounded-xl mt-4'>
-            <ShieldAlert className='h-5 w-5 text-amber-500 shrink-0 mt-0.5' />
-            <div className='space-y-1'>
-              <p className='text-xs font-bold text-amber-400 uppercase tracking-wider'>
-                Guest Mode Active
-              </p>
-              <p className='text-xs text-neutral-400'>
-                You are browsing the feed anonymously. Log in to like, comment,
-                or share your own stories.
-              </p>
-            </div>
+      {/* AREA KONTEN UTAMA TIMELINE FEEDS */}
+      <div className='w-full max-w-xl mx-auto space-y-6 pt-16 text-left'>
+        {!isClient ? (
+          <div className='space-y-4'>
+            {Array.from({ length: 2 }).map((_, idx) => (
+              <div
+                key={idx}
+                className='w-full h-48 bg-[#0B0F17] border border-[#181D27] rounded-[24px] animate-pulse'
+              />
+            ))}
           </div>
+        ) : (
+          <>
+            {currentTab === 'explore' && <ExploreTimeline />}
+            {currentTab === 'feed' && <HomeTimeline />}
+          </>
         )}
       </div>
 
-      {/* 💡 5. SESSIONS TESTING AREA (Kondisional + Pengaman Klien) */}
-      {isClient && isAuthenticated ? (
-        <div className='border-t border-neutral-200 pt-6 mt-12 w-full max-w-md'>
-          <p className='text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3'>
-            Session Testing Area
-          </p>
-          <Button
-            onClick={handleLogout}
-            variant='destructive'
-            className='rounded-xl font-bold h-11 px-5 flex items-center gap-2'
-          >
-            <LogOut className='h-4 w-4' />
-            <span>Secure Sign Out</span>
-          </Button>
-        </div>
-      ) : null}
+      {/* menu floating dock di bawah */}
+      <FeedBottomNav
+        isVisible={isVisible}
+        handlePlusAction={handlePlusAction}
+      />
+
+      {isCreateOpen && (
+        <CreatePostModal onClose={() => setIsCreateOpen(false)} />
+      )}
     </div>
   );
 }
