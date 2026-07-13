@@ -23,7 +23,6 @@ export default function AppProviders({ children }: ProvidersProps) {
   );
 
   return (
-    // 💡 Bungkus dengan Redux Provider di level paling luar
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </Provider>
