@@ -163,11 +163,18 @@ function ProfileSwitcher({
       ) : (
         /* 🚀 SALURKAN DATA SECARA BERSIH KE SUB-KOMPONEN MODULAR BARU ANDA */
         <PublicProfileContent
-          foundUser={foundUser}
+          foundUser={{
+            ...foundUser,
+            // 💡 KUNCI SINKRONISASI MUTLAK: Mendeteksi segala kemungkinan key relasi server Anda
+            isFollowedByMe: !!(
+              foundUser?.isFollowedByMe ??
+              foundUser?.isFollowing ??
+              foundUser?.followed
+            ),
+          }}
           userRealPosts={postsData?.data?.posts || []}
           realFollowersCount={followersData?.data?.pagination?.total || 0}
           realFollowingCount={followingData?.data?.pagination?.total || 0}
-          // 💡 KUNCI FIX: Ubah 'any' menjadi 'PostItem' secara eksplisit
           totalReceivedLikes={(postsData?.data?.posts || []).reduce(
             (acc: number, curr: PostItem) => acc + (curr.likeCount || 0),
             0
