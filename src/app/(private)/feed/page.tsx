@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react'; // 💡 HAPUS total useEffect dari daftar impor
+import { useState, useSyncExternalStore } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
@@ -22,7 +22,6 @@ export default function FeedPage() {
   const isVisible = useScrollDirection();
   const searchParams = useSearchParams();
 
-  // Baca parameter kueri ?tab=feed dari klik logo
   const tabQuery = searchParams.get('tab');
 
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -36,17 +35,11 @@ export default function FeedPage() {
   const [manualTab, setManualTab] = useState<'feed' | 'explore' | null>(null);
   const [prevTabQuery, setPrevIsTabQuery] = useState<string | null>(null);
 
-  // =========================================================================
-  // 👑 KUNCI DERIVATIF LOGO RESET (ANTI-CASCADING RENDER & EFFECTLESS):
-  // Jika rendering mendeteksi adanya kedatangan parameter ?tab=feed baru dari URL,
-  // langsung paksa ubah state penentu arah di sini saat rendering berjalan.
-  // Logika ini melenyapkan siklus useEffect dan menghancurkan peringatan linter 100%!
-  // =========================================================================
   if (tabQuery !== prevTabQuery) {
     if (tabQuery === 'feed') {
-      setManualTab(null); // Reset manual tab seketika ke default activeTab (feed)
+      setManualTab(null);
       if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // Gulir halus ke atas layar
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
     setPrevIsTabQuery(tabQuery);
@@ -68,15 +61,13 @@ export default function FeedPage() {
 
   return (
     <div className='w-full min-h-screen text-center relative pb-32'>
-      {/* 1. TOP FLOATING TABS */}
       <FeedTabs
         activeTab={currentTab}
         setActiveTab={setManualTab}
         isVisible={isVisible}
       />
 
-      {/* AREA KONTEN UTAMA TIMELINE FEEDS */}
-      <div className='w-full max-w-xl mx-auto space-y-6 pt-16 text-left'>
+      <div className='w-full max-w-2xl mx-auto space-y-6 pt-16 text-left'>
         {!isClient ? (
           <div className='space-y-4'>
             {Array.from({ length: 2 }).map((_, idx) => (
