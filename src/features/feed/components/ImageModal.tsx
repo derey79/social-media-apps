@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react'; // 💡 SUNTIKKAN: Impor useEffect untuk sinkronisasi properti
+import { useState } from 'react';
 import { X, Heart, MessageCircle, Bookmark, Share2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PostItem } from '@/types/types';
@@ -27,21 +27,12 @@ export default function ImageModal({ post, onClose }: ImageModalProps) {
   const [localLikeCount, setLocalLikeCount] = useState(post.likeCount);
 
   const [prevPostId, setPrevPostId] = useState(post.id);
-  // =========================================================================
-  // 👑 KUNCI KESELARASAN PROPERTI MODAL (INTERNAL PROPS SYNC):
-  // Menjamin jika ada perubahan data dari luar, state lokal modal langsung ikut sinkron.
-  // =========================================================================
 
   if (post.id !== prevPostId) {
     setLocalLikedByMe(post.likedByMe);
     setLocalLikeCount(post.likeCount);
     setPrevPostId(post.id);
   }
-
-  // useEffect(() => {
-  //   setLocalLikedByMe(post.likedByMe);
-  //   setLocalLikeCount(post.likeCount);
-  // }, [post.likedByMe, post.likeCount]);
 
   const getInitials = (name: string) => {
     if (!name) return '??';
@@ -53,11 +44,8 @@ export default function ImageModal({ post, onClose }: ImageModalProps) {
       .slice(0, 2);
   };
 
-  // 💡 PERBAIKAN 1: SINKRONISASI JALUR KLIK AVATAR KE UNIFIED PROFILE STRATEGY
   const handleNavigateToAuthor = () => {
-    onClose(); // Tutup modal overlay terlebih dahulu
-
-    // Alihkan rute dari /user/ menjadi masuk ke rute bersih bersatu atap /profile/
+    onClose();
     const safeUsername = encodeURIComponent(post.author.username);
     router.push(`/profile/${safeUsername}`);
   };
@@ -73,20 +61,14 @@ export default function ImageModal({ post, onClose }: ImageModalProps) {
       }
     },
     onSuccess: () => {
-      // 1. Segarkan Tab Explore Linimasa Global Anda (Membuat Feed di bawah ikut berubah!)
+      // 🚀 PENYEGARAN CACHE MASSAL: Memaksa TanStack Query memperbarui data di hulu
       queryClient.invalidateQueries({ queryKey: ['posts', 'infinite-list'] });
-
-      // 2. Segarkan Tab Feed Personal Lini Masa Akun Anda
       queryClient.invalidateQueries({ queryKey: ['posts', 'home-feed-list'] });
-
-      // 3. Segarkan seluruh matriks counter angka Likes di profil pribadi & publik
+      queryClient.invalidateQueries({ queryKey: ['posts', 'explore-list'] });
       queryClient.invalidateQueries({ queryKey: ['user'] });
-
-      // 4. Segarkan kueri detail postingan ini jika ada
       queryClient.invalidateQueries({ queryKey: ['post', post.id] });
     },
     onError: () => {
-      // Kembalikan state jika server Railway mengalami kendala/runtuh
       setLocalLikedByMe(post.likedByMe);
       setLocalLikeCount(post.likeCount);
       toast.error('Failed to sync like action from modal view 💔');
@@ -170,9 +152,9 @@ export default function ImageModal({ post, onClose }: ImageModalProps) {
             />
           </div>
 
-          <div className='p-4 border-t border-[#181D27] flex items-center justify-between text-neutral-400'>
+          {/* ACTION BUTTON CONTAINER */}
+          <div className='p-4 border-t border-[#181D27] flex items-center justify-between text-neutral-400 bg-[#070A10] select-none'>
             <div className='flex items-center gap-4'>
-              {/* TOMBOL LIKE REAKTIF MAPS */}
               <button
                 onClick={handleLikeClick}
                 className={`flex items-center gap-1.5 text-xs font-bold transition group cursor-pointer ${
@@ -207,6 +189,10 @@ export default function ImageModal({ post, onClose }: ImageModalProps) {
             </div>
           </div>
 
+          {/* =========================================================================
+           * 💡 KUNCI SINKRONISASI FORM KOMENTAR AMAN:
+           * Salurkan postId ke sub-komponen form agar kodenya kembali lurus 100% sempurna!
+           * ========================================================================= */}
           <ModalCommentForm postId={post.id} />
         </div>
       </div>
