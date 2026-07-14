@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react'; // 💡 Hapus impor useEffect karena sudah tidak dibutuhkan
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from '@/lib/axios';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { UserPlus, UserMinus } from 'lucide-react';
+import { UserPlus, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PublicProfileHeaderProps {
-  userId: number;
   username: string;
   name: string;
   avatarUrl: string | null;
@@ -18,7 +17,6 @@ interface PublicProfileHeaderProps {
 }
 
 export default function PublicProfileHeader({
-  userId,
   username,
   name,
   avatarUrl,
@@ -27,34 +25,56 @@ export default function PublicProfileHeader({
 }: PublicProfileHeaderProps) {
   const queryClient = useQueryClient();
 
-  // 💡 1. ARSITEKTUR SINKRONISASI BARU (ANTI-CASCADING RENDER):
-  // Kita buat dua state: satu untuk menampung nilai interaksi saat ini, dan satu untuk mencatat props terakhir dari server.
+  // State lokal untuk interaksi instan (Optimistic UI update)
   const [localIsFollowed, setLocalIsFollowed] = useState(isFollowedByMe);
-  const [prevIsFollowedByMe, setPrevIsFollowedByMe] = useState(isFollowedByMe);
+  const [prevIsFollowed, setPrevIsFollowed] = useState(isFollowedByMe);
 
-  // Jika data cache di TanStack Query diperbarui oleh server Railway di latar belakang,
-  // baris if di bawah ini akan langsung menangkap perubahannya secara instan SAAT RENDERING,
-  // menyesuaikan state lokal tanpa pernah memicu siklus efek samping pasca-render!
-  if (isFollowedByMe !== prevIsFollowedByMe) {
+  if (isFollowedByMe !== prevIsFollowed) {
     setLocalIsFollowed(isFollowedByMe);
-    setPrevIsFollowedByMe(isFollowedByMe);
+    setPrevIsFollowed(isFollowedByMe);
   }
 
+  // 💡 MUTASI UTAMA: Menembak rute follow/unfollow murni absolut /follow/{username}
   const toggleFollowMutation = useMutation({
-    // document: undefined, // Struktur internal mutation
-    mutationFn: async () => {
-      const response = await axiosInstance.post(`/users/${userId}/follow`);
-      return response.data;
+    mutationFn: async (isCurrentlyFollowing: boolean) => {
+      if (isCurrentlyFollowing) {
+        const response = await axiosInstance.delete(`/follow/${username}`);
+        return response.data;
+      } else {
+        const response = await axiosInstance.post(`/follow/${username}`);
+        return response.data;
+      }
     },
     onSuccess: () => {
-      // Segarkan cache kueri agar data status sinkron ter-update secara global
+      // =========================================================================
+      // 👑 KUNCI KONSISTENSI RELASI MUTLAK:
+      // Paksa server menarik ulang data total tanpa toleransi cache lama!
+      // =========================================================================
       queryClient.invalidateQueries({
-        queryKey: ['user', 'public-profile', username],
+        queryKey: ['user', 'public-profile-detail', username],
       });
-      queryClient.invalidateQueries({ queryKey: ['users', 'search'] });
+      queryClient.invalidateQueries({
+        queryKey: ['user', 'public-followers', username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['user', 'public-following', username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['user', `public-followers-list`, username],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['user', `public-following-list`, username],
+      });
+      queryClient.invalidateQueries({ queryKey: ['posts', 'home-feed-list'] });
+
+      toast.success(
+        localIsFollowed
+          ? `Unfollowed @${username}`
+          : `You are now following @${username} 🎉`
+      );
     },
     onError: () => {
-      // Kembalikan ke posisi awal jika mendeteksi kendala koneksi internet server
+      // Balikkan ke state semula jika API server Railway mendeteksi kendala token/koneksi
       setLocalIsFollowed(isFollowedByMe);
       toast.error('Failed to sync relationship status with server 💔');
     },
@@ -63,11 +83,8 @@ export default function PublicProfileHeader({
   const handleFollowClick = () => {
     if (toggleFollowMutation.isPending) return;
 
-    // Optimistic Update UI secara instan (Zero Latency)
-    setLocalIsFollowed((prev) => !prev);
-
-    // Tembak asinkronus ke API Railway Anda
-    toggleFollowMutation.mutate();
+    toggleFollowMutation.mutate(localIsFollowed);
+    setLocalIsFollowed((prev) => !prev); // Akselerasi UI lokal instan
   };
 
   const getInitials = (nameStr: string) => {
@@ -110,16 +127,21 @@ export default function PublicProfileHeader({
           onClick={handleFollowClick}
           disabled={toggleFollowMutation.isPending}
           variant={localIsFollowed ? 'outline' : 'default'}
-          className={`rounded-full px-5 h-9 font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ${
+          className={`rounded-full px-5 h-9 font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer select-none ${
             localIsFollowed
-              ? 'bg-transparent border-[#181D27] text-white hover:bg-red-950/20 hover:text-red-400 hover:border-red-900'
+              ? 'bg-[#121620] border border-[#222938] text-indigo-400 hover:bg-neutral-800'
               : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}
         >
-          {localIsFollowed ? (
+          {toggleFollowMutation.isPending ? (
             <>
-              <UserMinus className='h-3.5 w-3.5' />
-              <span>Unfollow</span>
+              <Loader2 className='h-3.5 w-3.5 animate-spin' />
+              <span>Syncing...</span>
+            </>
+          ) : localIsFollowed ? (
+            <>
+              <Check className='h-3.5 w-3.5 text-indigo-400' />
+              <span>Following</span>
             </>
           ) : (
             <>
