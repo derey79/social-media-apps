@@ -9,28 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/features/auth/hooks/useDebounce';
 import { axiosInstance } from '@/lib/axios';
-
-interface SearchedUser {
-  id: number;
-  username: string;
-  name: string;
-  avatarUrl: string | null;
-  isFollowedByMe: boolean;
-}
-
-interface SearchApiResponse {
-  success: boolean;
-  message: string;
-  data: {
-    users: SearchedUser[];
-  };
-}
-
-interface NavSearchBarProps {
-  isClient: boolean;
-  isAuthenticated: boolean;
-  getInitials: (name: string) => string;
-}
+import { SearchApiResponse, NavSearchBarProps } from '@/types/types';
 
 export default function NavSearchBar({
   isClient,
@@ -129,14 +108,8 @@ export default function NavSearchBar({
                 <div
                   key={searchedUser.id}
                   onClick={() => {
-                    setIsDropdownOpen(false); // Tutup dropdown pencarian seketika
-                    setSearchQuery(''); // Bersihkan kolom teks input agar rapi kembali
-
-                    // =========================================================================
-                    // 🚀 KUNCI KESELARASAN DATA (ANTI COUNTER ANGKA 0):
-                    // Alihkan navigasi masuk ke folder rute atap terpadu kita yaitu /profile/[username]
-                    // Buang seluruh rantai kueri parameters lama agar data ditarik murni dari database Swagger!
-                    // =========================================================================
+                    setIsDropdownOpen(false);
+                    setSearchQuery('');
                     const safeUsername = encodeURIComponent(
                       searchedUser.username
                     );

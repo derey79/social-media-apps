@@ -10,24 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-interface NavUserProfile {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  phone?: string;
-  bio?: string | null;
-  avatarUrl?: string | null;
-}
-
-interface NavUserMenuProps {
-  isClient: boolean;
-  isAuthenticated: boolean;
-  user: NavUserProfile | null;
-  getInitials: (name: string) => string;
-  handleLogout: () => void;
-}
+import { NavUserMenuProps } from '@/types/types';
 
 export default function NavUserMenu({
   isClient,
@@ -47,10 +30,6 @@ export default function NavUserMenu({
   if (isAuthenticated && user) {
     return (
       <div className='flex flex-row items-center gap-3 shrink-0'>
-        <span className='text-sm font-semibold  hidden md:block tracking-wide select-none'>
-          {user.name}
-        </span>
-
         <DropdownMenu>
           <DropdownMenuTrigger className='focus:outline-none select-none'>
             <Avatar className='h-10 w-10 border border-[#181D27] hover:opacity-80 transition cursor-pointer'>
@@ -91,6 +70,9 @@ export default function NavUserMenu({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <span className='text-sm font-semibold  hidden md:block tracking-wide select-none'>
+          {user.name}
+        </span>
       </div>
     );
   }
