@@ -1,23 +1,18 @@
 'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import PublicProfileHeader from './PublicProfileHeader';
-import PublicProfileStats from './PublicProfileStats';
-import PostCard from '@/features/feed/components/PostCard';
 import { PostItem } from '@/types/types';
+import PublicProfileHeader from '@/features/profile/components/PublicProfileHeader';
+import PublicProfileStats from '@/features/profile/components/PublicProfileStats';
+import ProfileTabs from '@/features/profile/components/ProfileTabs'; // 💡 SUNTIKKAN: Impor komponen modular baru kita!
 
-// Daftarkan kontrak tipe data parameter properti masuk
 interface PublicProfileContentProps {
   foundUser: {
     id: number;
     username: string;
     name: string;
     avatarUrl: string | null;
+    bio: string | null;
     isFollowedByMe: boolean;
-    _count?: {
-      followers: number;
-      following: number;
-    };
   };
   userRealPosts: PostItem[];
   realFollowersCount: number;
@@ -42,10 +37,8 @@ export default function PublicProfileContent({
   };
 
   return (
-    <div className='w-full max-w-2xl mx-auto space-y-10 pt-4 text-left'>
-      {/* HEADER PROFIL PUBLIK */}
+    <div className='w-full max-w-2xl mx-auto space-y-10 pt-4 text-left pb-36 px-4'>
       <PublicProfileHeader
-        userId={foundUser.id}
         username={foundUser.username}
         name={foundUser.name}
         avatarUrl={foundUser.avatarUrl}
@@ -53,35 +46,18 @@ export default function PublicProfileContent({
         isClient={isClient}
       />
 
-      {/* MATRIKS STATISTIK COUNTER ANGKA */}
-      <PublicProfileStats stats={livePublicStats} isClient={isClient} />
+      <PublicProfileStats
+        stats={livePublicStats}
+        isClient={isClient}
+        username={foundUser.username}
+        isMyProfile={false}
+      />
 
-      {/* TAB AREA LIST POSTINGAN BAWAH */}
-      <Tabs defaultValue='user-posts' className='w-full'>
-        <TabsList className='w-full justify-start bg-transparent border-b border-[#181D27] rounded-none p-0 h-auto gap-8'>
-          <TabsTrigger
-            value='user-posts'
-            className='data-[state=active]:border-b-2 data-[state=active]:border-white data-[state=active]:text-white rounded-none bg-transparent p-0 pb-3 text-sm font-semibold text-neutral-400 border-b-2 border-transparent transition-all flex items-center gap-2'
-          >
-            <span>Posts ({userRealPosts.length})</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent
-          value='user-posts'
-          className='pt-6 focus-visible:outline-none space-y-4'
-        >
-          {userRealPosts.length === 0 ? (
-            <p className='text-sm text-neutral-400 tracking-wide font-medium text-center py-12'>
-              {`@${foundUser.username} hasn't posted anything yet.`}
-            </p>
-          ) : (
-            userRealPosts.map((postItem) => (
-              <PostCard key={postItem.id} post={postItem} />
-            ))
-          )}
-        </TabsContent>
-      </Tabs>
+      <ProfileTabs
+        username={foundUser.username}
+        isMyProfile={false}
+        initialPosts={userRealPosts}
+      />
     </div>
   );
 }
