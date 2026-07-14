@@ -3,17 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatPostTimestamp } from '@/constanta/formatPostTimestamp';
-
-interface PostHeaderProps {
-  author: {
-    id: number;
-    name: string;
-    username: string;
-    avatarUrl: string | null;
-  };
-  createdAt: string;
-  likedByMe?: boolean;
-}
+import { PostHeaderProps } from '@/types/types';
 
 export default function PostHeader({ author, createdAt }: PostHeaderProps) {
   const router = useRouter();
@@ -29,14 +19,9 @@ export default function PostHeader({ author, createdAt }: PostHeaderProps) {
   };
 
   const handleNavigate = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Mencegah pemicu klik kartu terluar
-
-    // 💡 SOLUSI REVISI PRESET: Hapus seluruh Query Parameters (?id=...&name=...)
-    // karena halaman ProfileContent kita sudah ditenagai TanStack Query asinkronus
-    // yang otomatis menarik data profile dari database berdasarkan username di URL bersih!
+    e.stopPropagation();
     const safeUsername = encodeURIComponent(author.username);
 
-    // 🚀 Navigasi murni ke URL yang super bersih dan indah!
     router.push(`/profile/${safeUsername}`);
   };
 

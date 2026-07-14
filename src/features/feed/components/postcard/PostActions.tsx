@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Heart, MessageCircle, Share2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, Loader2 } from 'lucide-react';
 import { axiosInstance } from '@/lib/axios';
 import { toast } from 'sonner';
 import { PostItem } from '@/types/types';
@@ -10,6 +10,14 @@ import { PostItem } from '@/types/types';
 interface PostActionsProps {
   post: PostItem;
   onCommentClick: () => void;
+}
+
+interface SaveApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    saved: boolean;
+  };
 }
 
 export default function PostActions({
@@ -21,45 +29,67 @@ export default function PostActions({
   const [localLikedByMe, setLocalLikedByMe] = useState(post.likedByMe);
   const [localLikeCount, setLocalLikeCount] = useState(post.likeCount);
 
-  // 💡 STATE PELACAK ID SEBELUMNYA (ANTI-CASCADING RENDER SINKRONISASI MODAL DETIL)
-  const [prevPostId, setPrevPostId] = useState(post.id);
+  const [localIsSaved, setLocalIsSaved] = useState(post.savedByMe);
 
-  // =========================================================================
-  // 👑 KUNCI EMAS PENYELARAS FEED (EFFECTLESS STATE RE-SYNC):
-  // Jika rendering mendeteksi ID postingan sama namun data cache luar diperbarui
-  // (misal pasca klik Like di dalam modal), paksa sinkronisasi ulang state lokal
-  // di halaman beranda secara instan SAAT RENDERING berjalan tanpa efek samping!
-  // =========================================================================
-  if (
-    post.id !== prevPostId ||
-    post.likeCount !== localLikeCount ||
-    post.likedByMe !== localLikedByMe
-  ) {
+  const [prevPostId, setPrevPostId] = useState(post.id);
+  const [prevSavedByMe, setPrevSavedByMe] = useState(post.savedByMe);
+
+  if (post.id !== prevPostId) {
     setLocalLikedByMe(post.likedByMe);
     setLocalLikeCount(post.likeCount);
+    setLocalIsSaved(post.savedByMe);
     setPrevPostId(post.id);
+    setPrevSavedByMe(post.savedByMe);
   }
 
-  // Mutasi untuk Hit API Like / Unlike Idempotent
+  if (post.savedByMe !== prevSavedByMe) {
+    setLocalIsSaved(post.savedByMe);
+    setPrevSavedByMe(post.savedByMe);
+  }
+
   const toggleLikeMutation = useMutation({
     mutationFn: async (isCurrentlyLiked: boolean) => {
       if (isCurrentlyLiked) {
-        const response = await axiosInstance.delete(`/posts/${post.id}/like`);
-        return response.data;
+        return (await axiosInstance.delete(`/posts/${post.id}/like`)).data;
       } else {
-        const response = await axiosInstance.post(`/posts/${post.id}/like`);
-        return response.data;
+        return (await axiosInstance.post(`/posts/${post.id}/like`)).data;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts', 'infinite-list'] });
       queryClient.invalidateQueries({ queryKey: ['posts', 'home-feed-list'] });
-      queryClient.invalidateQueries({ queryKey: ['user'] });
     },
     onError: () => {
       setLocalLikedByMe(post.likedByMe);
       setLocalLikeCount(post.likeCount);
       toast.error('Failed to sync like action with server 💔');
+    },
+  });
+
+  const toggleSaveMutation = useMutation<
+    SaveApiResponse,
+    Error,
+    { wasSaved: boolean }
+  >({
+    mutationFn: async () => {
+      const response = await axiosInstance.post(`/posts/${post.id}/save`);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['posts', 'infinite-list'] });
+      queryClient.invalidateQueries({ queryKey: ['posts', 'home-feed-list'] });
+      queryClient.invalidateQueries({ queryKey: ['posts', 'explore-list'] });
+      queryClient.invalidateQueries({ queryKey: ['posts', 'my-saved-list'] });
+
+      toast.success(
+        variables.wasSaved
+          ? 'Removed from bookmarks'
+          : 'Post saved to bookmarks! 📑'
+      );
+    },
+    onError: (_, variables) => {
+      setLocalIsSaved(variables.wasSaved);
+      toast.error('Failed to sync bookmark status with server 💔');
     },
   });
 
@@ -78,6 +108,17 @@ export default function PostActions({
     }
   };
 
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (toggleSaveMutation.isPending) return;
+
+    const currentSavedState = localIsSaved;
+
+    setLocalIsSaved(!currentSavedState);
+
+    toggleSaveMutation.mutate({ wasSaved: currentSavedState });
+  };
+
   const handleShareClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`);
@@ -85,33 +126,25 @@ export default function PostActions({
   };
 
   return (
-    <div className='flex items-center gap-6 pt-2 border-t border-[#181D27]/40 text-neutral-400'>
+    <div className='flex items-center gap-6 pt-2 border-t border-[#181D27]/40 text-neutral-400 select-none'>
       {/* Tombol Like */}
       <button
         onClick={handleLikeClick}
+        disabled={toggleLikeMutation.isPending}
         className={`flex items-center gap-2 text-xs font-semibold group transition cursor-pointer ${
-          localLikedByMe
-            ? 'text-rose-500 hover:text-rose-400'
-            : 'hover:text-rose-500'
+          localLikedByMe ? 'text-rose-500' : 'hover:text-rose-500'
         }`}
       >
         <div
-          className={`p-2 rounded-xl transition ${
-            localLikedByMe
-              ? 'bg-rose-500/5 group-hover:bg-rose-500/10'
-              : 'group-hover:bg-rose-500/10'
-          }`}
+          className={`p-2 rounded-xl transition ${localLikedByMe ? 'bg-rose-500/5' : 'group-hover:bg-rose-500/10'}`}
         >
           <Heart
-            className={`h-4 w-4 transition-transform active:scale-125 ${
-              localLikedByMe ? 'fill-rose-500 text-rose-500' : ''
-            }`}
+            className={`h-4 w-4 transition-transform active:scale-125 ${localLikedByMe ? 'fill-rose-500 text-rose-500' : ''}`}
           />
         </div>
         <span>{localLikeCount}</span>
       </button>
 
-      {/* Tombol Comment */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -125,15 +158,39 @@ export default function PostActions({
         <span>{post.commentCount}</span>
       </button>
 
-      {/* Tombol Share */}
-      <button
-        onClick={handleShareClick}
-        className='flex items-center gap-2 text-xs font-semibold group hover:text-teal-500 transition ml-auto cursor-pointer'
-      >
-        <div className='p-2 rounded-xl group-hover:bg-teal-500/10 transition'>
-          <Share2 className='h-4 w-4' />
-        </div>
-      </button>
+      <div className='flex items-center gap-1 ml-auto'>
+        {/* Tombol Share */}
+        <button
+          onClick={handleShareClick}
+          className='flex items-center gap-2 text-xs font-semibold group hover:text-teal-500 transition cursor-pointer'
+        >
+          <div className='p-2 rounded-xl group-hover:bg-teal-500/10 transition'>
+            <Share2 className='h-4 w-4' />
+          </div>
+        </button>
+
+        <button
+          onClick={handleSaveClick}
+          disabled={toggleSaveMutation.isPending}
+          className={`flex items-center text-xs font-semibold group transition cursor-pointer rounded-xl ${
+            localIsSaved ? 'text-amber-500' : 'hover:text-amber-500'
+          }`}
+        >
+          <div
+            className={`p-2 rounded-xl transition ${localIsSaved ? 'bg-amber-500/5' : 'group-hover:bg-amber-500/10'}`}
+          >
+            {toggleSaveMutation.isPending ? (
+              <Loader2 className='h-4 w-4 animate-spin text-amber-500' />
+            ) : (
+              <Bookmark
+                className={`h-4 w-4 transition-transform active:scale-125 ${
+                  localIsSaved ? 'fill-amber-500 text-amber-500' : ''
+                }`}
+              />
+            )}
+          </div>
+        </button>
+      </div>
     </div>
   );
 }
