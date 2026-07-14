@@ -16,7 +16,6 @@ import { Loader2 } from 'lucide-react';
 import { useScrollDirection } from '@/features/auth/hooks/useScrollDirection';
 import { toast } from 'sonner';
 
-// 💡 IMPOR SUB-KOMPONEN MODULAR UTAN
 import PublicProfileContent from '@/features/profile/components/PublicProfileContent';
 import MyProfileContent from '@/features/profile/components/MyProfileContent';
 // import MyProfileContent from '@/features/feed/components/MyProfileContent';
@@ -82,7 +81,6 @@ function ProfileSwitcher({
     }
   }, [isClient, targetUsername, currentUser, router]);
 
-  // 💡 KUERI PARALEL SERVER (Murni hanya mengurus Data Fetching)
   const {
     data: profileResponse,
     isLoading: isUserLoading,
@@ -146,7 +144,6 @@ function ProfileSwitcher({
 
   return (
     <div className='w-full min-h-screen text-center relative pb-32'>
-      {/* 🔳 KONDISI RENDERING YANG SUPER RINGKAS & INDAH */}
       {isMyOwnProfile ? (
         <MyProfileContent />
       ) : isDataLoading ? (
@@ -161,11 +158,10 @@ function ProfileSwitcher({
           User @{targetUsername} could not be found in the system database.
         </div>
       ) : (
-        /* 🚀 SALURKAN DATA SECARA BERSIH KE SUB-KOMPONEN MODULAR BARU ANDA */
         <PublicProfileContent
           foundUser={{
             ...foundUser,
-            // 💡 KUNCI SINKRONISASI MUTLAK: Mendeteksi segala kemungkinan key relasi server Anda
+
             isFollowedByMe: !!(
               foundUser?.isFollowedByMe ??
               foundUser?.isFollowing ??
@@ -183,13 +179,11 @@ function ProfileSwitcher({
         />
       )}
 
-      {/* MASTER NAV BAR BAWAH */}
       <FeedBottomNav
         isVisible={isVisible}
         handlePlusAction={handlePlusAction}
       />
 
-      {/* MODAL CREATION STATUS OVERLAY */}
       {isCreateOpen && (
         <CreatePostModal onClose={() => setIsCreateOpen(false)} />
       )}
