@@ -28,18 +28,35 @@ export default function PostActions({
 
   const [localLikedByMe, setLocalLikedByMe] = useState(post.likedByMe);
   const [localLikeCount, setLocalLikeCount] = useState(post.likeCount);
-
   const [localIsSaved, setLocalIsSaved] = useState(post.savedByMe);
 
+  // 💡 TRACKER STATE SEBELUMNYA (MENGUNCI SINKRONISASI LIKES & COMMENTS LINTAS VIEW MODAL)
   const [prevPostId, setPrevPostId] = useState(post.id);
   const [prevSavedByMe, setPrevSavedByMe] = useState(post.savedByMe);
+  const [prevLikeCount, setPrevLikeCount] = useState(post.likeCount);
+  const [prevLikedByMe, setPrevLikedByMe] = useState(post.likedByMe);
+  const [prevCommentCount, setPrevCommentCount] = useState(post.commentCount); // ✨ SUNTIKKAN: Pelacak jumlah komentar lama
 
-  if (post.id !== prevPostId) {
+  // =========================================================================
+  // 👑 KUNCI EMAS REAKTIF KOMENTAR TIMBAL BALIK (STRICT COMPONENT OVERRIDE STRATEGY):
+  // Jika rendering mendeteksi ID berganti ATAU jumlah Likes, status interaksi,
+  // maupun JUMLAH KOMENTAR BARU (pasca-submit di form komentar ImageModal) berubah,
+  // paksa baris state lokal kartu feed ini untuk ikut berbalik arah seketika!
+  // =========================================================================
+  if (
+    post.id !== prevPostId ||
+    post.likeCount !== prevLikeCount ||
+    post.likedByMe !== prevLikedByMe ||
+    post.commentCount !== prevCommentCount // ✨ Deteksi jika ada lonjakan komentar baru dari modal luar
+  ) {
     setLocalLikedByMe(post.likedByMe);
     setLocalLikeCount(post.likeCount);
     setLocalIsSaved(post.savedByMe);
     setPrevPostId(post.id);
     setPrevSavedByMe(post.savedByMe);
+    setPrevLikeCount(post.likeCount);
+    setPrevLikedByMe(post.likedByMe);
+    setPrevCommentCount(post.commentCount); // ✨ Selaraskan angka tracker komentar saat rendering
   }
 
   if (post.savedByMe !== prevSavedByMe) {
@@ -58,6 +75,9 @@ export default function PostActions({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts', 'infinite-list'] });
       queryClient.invalidateQueries({ queryKey: ['posts', 'home-feed-list'] });
+      queryClient.invalidateQueries({ queryKey: ['posts', 'explore-list'] });
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['post', post.id] });
     },
     onError: () => {
       setLocalLikedByMe(post.likedByMe);
@@ -113,9 +133,7 @@ export default function PostActions({
     if (toggleSaveMutation.isPending) return;
 
     const currentSavedState = localIsSaved;
-
     setLocalIsSaved(!currentSavedState);
-
     toggleSaveMutation.mutate({ wasSaved: currentSavedState });
   };
 
@@ -142,7 +160,7 @@ export default function PostActions({
             className={`h-4 w-4 transition-transform active:scale-125 ${localLikedByMe ? 'fill-rose-500 text-rose-500' : ''}`}
           />
         </div>
-        <span>{localLikeCount}</span>
+        <span className='text-white'>{localLikeCount}</span>
       </button>
 
       <button
@@ -155,7 +173,8 @@ export default function PostActions({
         <div className='p-2 rounded-xl group-hover:bg-blue-500/10 transition'>
           <MessageCircle className='h-4 w-4' />
         </div>
-        <span>{post.commentCount}</span>
+
+        <span className='text-white'>{post.commentCount}</span>
       </button>
 
       <div className='flex items-center gap-1 ml-auto'>
@@ -169,6 +188,7 @@ export default function PostActions({
           </div>
         </button>
 
+        {/* Tombol Bookmark */}
         <button
           onClick={handleSaveClick}
           disabled={toggleSaveMutation.isPending}
