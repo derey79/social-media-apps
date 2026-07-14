@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'; // 💡 SUNTIKKAN: Impor useQuery
 import { axiosInstance } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { Home, Loader2 } from 'lucide-react';
 import PostCard from './PostCard';
 import { PostItem } from '@/types/types';
+import PostCardSkeleton from '@/components/ui/skeleton/PostCardSkeleton';
 
-// 💡 PERBAIKAN 1: SINKRONISASI PAYLOAD RESPON /api/feed
 interface FeedApiResponse {
   success: boolean;
   message: string;
@@ -23,8 +23,24 @@ interface FeedApiResponse {
   };
 }
 
+interface SavedApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    posts: { id: number }[];
+  };
+}
+
 export default function HomeTimeline() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const { data: savedResponse } = useQuery<SavedApiResponse>({
+    queryKey: ['posts', 'my-saved-list'],
+    queryFn: async () =>
+      (await axiosInstance.get('/me/saved?page=1&limit=50')).data,
+  });
+
+  const savedPostIds = savedResponse?.data?.posts?.map((p) => p.id) || [];
 
   const {
     data,
@@ -50,7 +66,7 @@ export default function HomeTimeline() {
         ? pagination.page + 1
         : undefined;
     },
-    staleTime: 1000 * 60 * 3, // Cache aman selama 3 menit
+    staleTime: 1000 * 60 * 3,
   });
 
   useEffect(() => {
@@ -73,14 +89,15 @@ export default function HomeTimeline() {
 
   if (isLoading) {
     return (
-      <div className='space-y-4'>
-        {Array.from({ length: 3 }).map((_, idx) => (
-          <div
-            key={idx}
-            className='w-full h-48 bg-[#0B0F17] border border-[#181D27] rounded-[24px] animate-pulse'
-          />
-        ))}
-      </div>
+      // <div className='space-y-4'>
+      //   {Array.from({ length: 3 }).map((_, idx) => (
+      //     <div
+      //       key={idx}
+      //       className='w-full h-48 bg-[#0B0F17] border border-[#181D27] rounded-[24px] animate-pulse'
+      //     />
+      //   ))}
+      // </div>
+      <PostCardSkeleton />
     );
   }
 
@@ -117,9 +134,19 @@ export default function HomeTimeline() {
 
   return (
     <div className='space-y-4'>
-      {feedItemsList.map((postItem) => (
-        <PostCard key={postItem.id} post={postItem} />
-      ))}
+      {feedItemsList.map((postItem) => {
+        const isActuallySaved = savedPostIds.includes(postItem.id);
+
+        return (
+          <PostCard
+            key={postItem.id}
+            post={{
+              ...postItem,
+              savedByMe: isActuallySaved ? true : !!postItem.savedByMe,
+            }}
+          />
+        );
+      })}
 
       <div
         ref={loadMoreRef}

@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { axiosInstance } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { Compass, Loader2 } from 'lucide-react';
-// import PostCard from './PostCard';
 import PostCard from '@/features/feed/components/PostCard';
 import { PostItem } from '@/types/types';
+import PostCardSkeleton from '@/components/ui/skeleton/PostCardSkeleton';
 
 interface PostsApiResponse {
   success: boolean;
@@ -23,8 +23,25 @@ interface PostsApiResponse {
   };
 }
 
+// 💡 SUNTIKKAN INTERFACE RESMI SAVED LIST
+interface SavedApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    posts: { id: number }[];
+  };
+}
+
 export default function ExploreTimeline() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const { data: savedResponse } = useQuery<SavedApiResponse>({
+    queryKey: ['posts', 'my-saved-list'],
+    queryFn: async () =>
+      (await axiosInstance.get('/me/saved?page=1&limit=50')).data,
+  });
+
+  const savedPostIds = savedResponse?.data?.posts?.map((p) => p.id) || [];
 
   const {
     data,
@@ -73,14 +90,15 @@ export default function ExploreTimeline() {
 
   if (isLoading) {
     return (
-      <div className='space-y-4'>
-        {Array.from({ length: 3 }).map((_, idx) => (
-          <div
-            key={idx}
-            className='w-full h-48 bg-[#0B0F17] border border-[#181D27] rounded-[24px] animate-pulse'
-          />
-        ))}
-      </div>
+      // <div className='space-y-4'>
+      //   {Array.from({ length: 3 }).map((_, idx) => (
+      //     <div
+      //       key={idx}
+      //       className='w-full h-48 bg-[#0B0F17] border border-[#181D27] rounded-[24px] animate-pulse'
+      //     />
+      //   ))}
+      // </div>
+      <PostCardSkeleton />
     );
   }
 
@@ -116,11 +134,20 @@ export default function ExploreTimeline() {
 
   return (
     <div className='space-y-4'>
-      {postsList.map((postItem) => (
-        <PostCard key={postItem.id} post={postItem} />
-      ))}
+      {postsList.map((postItem) => {
+        const isActuallySaved = savedPostIds.includes(postItem.id);
 
-      {/* SENSOR MONITOR SCROLL */}
+        return (
+          <PostCard
+            key={postItem.id}
+            post={{
+              ...postItem,
+              savedByMe: isActuallySaved ? true : !!postItem.savedByMe,
+            }}
+          />
+        );
+      })}
+
       <div
         ref={loadMoreRef}
         className='w-full py-6 flex items-center justify-center'
