@@ -47,23 +47,36 @@ export function usePersistAuth() {
       const response = await axiosInstance.get('/me');
       return response.data;
     },
-    // 💡 Hanya jalankan kueri ini jika token ada DI local storage DAN data user di Redux belum dimuat
+    // Hanya jalankan kueri ini jika token ada di local storage DAN data user di Redux belum dimuat
     enabled: !!token && !user,
     staleTime: Infinity, // Mencegah pemanggilan berulang-ulang yang tidak perlu
   });
 
   useEffect(() => {
-    if (isSuccess && data?.data?.profile) {
-      const { id, name, username, email, phone } = data.data.profile;
+    // 💡 SINKRONISASI BARU: Pastikan data profile DAN data stats ikut terekstrak
+    if (isSuccess && data?.data?.profile && data?.data?.stats) {
+      const { id, name, username, email, phone, bio, avatarUrl } =
+        data.data.profile;
+      const { posts, followers, following, likes } = data.data.stats;
 
-      // 💡 RE-HYDRATE: Masukkan data asli profil dari server ke dalam Redux Store
+      // 💡 RE-HYDRATE SINKRON: Kirimkan objek bersarang sesuai cetak biru Redux Slice terbaru Anda
       dispatch(
         updateUser({
-          id: String(id), // Konversi ID number ke string agar match dengan tipe state Redux
-          name,
-          username,
-          email,
-          phone,
+          user: {
+            id: String(id),
+            name,
+            username,
+            email,
+            phone,
+            bio,
+            avatarUrl,
+          },
+          stats: {
+            posts,
+            followers,
+            following,
+            likes,
+          },
         })
       );
     }
