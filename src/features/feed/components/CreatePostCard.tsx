@@ -75,7 +75,7 @@ export default function CreatePostCard() {
   if (isClient && !isAuthenticated) return null;
 
   return (
-    <div className='w-full max-w-xl bg-[#0B0F17] border border-[#181D27] rounded-[24px] p-5 space-y-4 text-left transition-all'>
+    <div className='w-full max-w-3xl bg-[#0B0F17] border border-[#181D27] rounded-[24px] p-5 space-y-4 text-left transition-all'>
       <form onSubmit={handleSubmit} className='flex gap-4 items-start'>
         {/* FOTO PROFIL DINAMIS USER */}
         <Avatar className='h-10 w-10 border border-[#181D27] shrink-0'>
