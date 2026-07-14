@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore, Suspense } from 'react'; // 💡 KUNCI 1: Impor Suspense dari React
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/lib/store';
 import { useScrollDirection } from '@/features/auth/hooks/useScrollDirection';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react'; // 💡 Impor Loader2 untuk fallback shell
 
 import ExploreTimeline from '@/features/feed/components/ExploreTimeline';
 import HomeTimeline from '@/features/feed/components/HomeTimeline';
@@ -17,7 +18,11 @@ const emptySubscribe = () => () => {};
 const getSnapshot = () => true;
 const getServerSnapshot = () => false;
 
-export default function FeedPage() {
+// =========================================================================
+// 👑 REFORMASI 1: Ganti nama fungsi utama lama dari FeedPage menjadi FeedContent.
+// Komponen ini memegang useSearchParams() secara aman di bawah isolasi Suspense!
+// =========================================================================
+function FeedContent() {
   const router = useRouter();
   const isVisible = useScrollDirection();
   const searchParams = useSearchParams();
@@ -85,7 +90,6 @@ export default function FeedPage() {
         )}
       </div>
 
-      {/* menu floating dock di bawah */}
       <FeedBottomNav
         isVisible={isVisible}
         handlePlusAction={handlePlusAction}
@@ -95,5 +99,22 @@ export default function FeedPage() {
         <CreatePostModal onClose={() => setIsCreateOpen(false)} />
       )}
     </div>
+  );
+}
+
+export default function FeedPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className='py-24 flex flex-col items-center justify-center gap-3 text-white w-full max-w-2xl mx-auto'>
+          <Loader2 className='h-8 w-8 text-blue-500 animate-spin' />
+          <p className='text-sm text-neutral-400 font-medium'>
+            Streaming feed timeline shell...
+          </p>
+        </div>
+      }
+    >
+      <FeedContent />
+    </Suspense>
   );
 }
