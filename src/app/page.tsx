@@ -5,7 +5,6 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-// 💡 RUTE AKAR UTAMA (SERVER-SIDE REDIRECT GUARD)
 export default async function Page() {
   // Ambil token dari cookie di level server Next.js 15
   const cookieStore = await cookies();
