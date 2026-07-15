@@ -1,11 +1,13 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { useQuery } from '@tanstack/react-query';
 import { axiosInstance } from '@/lib/axios';
 import { RootState } from '@/lib/store';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Settings, Loader2 } from 'lucide-react';
 import { PostItem } from '@/types/types';
@@ -28,6 +30,8 @@ const getSnapshot = () => true;
 const getServerSnapshot = () => false;
 
 export default function MyProfileContent() {
+  const router = useRouter();
+
   const isClient = useSyncExternalStore(
     emptySubscribe,
     getSnapshot,
@@ -35,7 +39,7 @@ export default function MyProfileContent() {
   );
   const { user: currentUser } = useSelector((state: RootState) => state.auth);
 
-  // 💡 KUERI 1: Tarik daftar postingan milik saya
+  //  Tarik daftar postingan
   const { data: postsData, isLoading: isPostsLoading } =
     useQuery<UserPostsApiResponse>({
       queryKey: ['user', 'my-posts', currentUser?.username],
@@ -48,7 +52,7 @@ export default function MyProfileContent() {
       enabled: !!currentUser?.username,
     });
 
-  // 💡 KUERI 2: Tarik total Followers
+  //  Tarik total Followers
   const { data: myFollowersData, isLoading: isFollowersLoading } =
     useQuery<UserPostsApiResponse>({
       queryKey: ['user', 'my-followers', currentUser?.username],
@@ -61,7 +65,7 @@ export default function MyProfileContent() {
       enabled: !!currentUser?.username,
     });
 
-  // 💡 KUERI 3: Tarik total Following
+  // Tarik total Following
   const { data: myFollowingData, isLoading: isFollowingLoading } =
     useQuery<UserPostsApiResponse>({
       queryKey: ['user', 'my-following', currentUser?.username],
@@ -109,16 +113,23 @@ export default function MyProfileContent() {
     <div className='w-full max-w-3xl mx-auto space-y-10 pt-4 text-left pb-36 px-4'>
       <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b border-[#181D27]'>
         <div className='flex items-center gap-5'>
-          <Avatar className='h-24 w-24 border-2 border-[#181D27]'>
-            <AvatarImage
-              src={isClient ? currentUser?.avatarUrl || undefined : undefined}
-              alt={currentUser?.name}
-            />
-            <AvatarFallback className='bg-neutral-800 text-white font-bold text-2xl'>
-              {isClient && currentUser?.name
-                ? getInitials(currentUser.name)
-                : '??'}
-            </AvatarFallback>
+          <Avatar className='h-24 w-24 border-2 border-[#181D27] relative overflow-hidden'>
+            {isClient && currentUser?.avatarUrl ? (
+              <Image
+                src={currentUser.avatarUrl}
+                alt={currentUser.name || 'Profile picture'}
+                fill
+                priority={true} // ⚡ Legally pre-loads the image down to milliseconds!
+                sizes='96px'
+                className='object-cover'
+              />
+            ) : (
+              <AvatarFallback className='bg-neutral-800 text-white font-bold text-2xl w-full h-full flex items-center justify-center rounded-full'>
+                {isClient && currentUser?.name
+                  ? getInitials(currentUser.name)
+                  : '??'}
+              </AvatarFallback>
+            )}
           </Avatar>
 
           <div className='space-y-1'>
@@ -139,6 +150,7 @@ export default function MyProfileContent() {
         <div className='flex items-center gap-2'>
           <Button
             variant='outline'
+            onClick={() => router.push('/profile/edit')}
             className='rounded-full px-4 h-9 font-bold text-xs border-[#181D27] bg-transparent text-white hover:bg-neutral-900 transition flex items-center gap-1.5 cursor-pointer'
           >
             <Settings className='h-3.5 w-3.5' />
